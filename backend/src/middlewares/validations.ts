@@ -119,6 +119,12 @@ export const validateUserBody = celebrate({
     }),
 })
 
+export const validateSearchQuery = celebrate({
+    query: Joi.object().keys({
+        search: Joi.string().max(100).optional(),
+    }),
+})
+
 export const validateAuthentication = celebrate({
     body: Joi.object().keys({
         email: Joi.string()

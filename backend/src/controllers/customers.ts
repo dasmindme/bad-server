@@ -1,5 +1,7 @@
 import { NextFunction, Request, Response } from 'express'
 import { FilterQuery } from 'mongoose'
+import escapeRegExp from '../utils/escapeRegExp'
+import escapeHtml from '../utils/escapeHtml'
 import NotFoundError from '../errors/not-found-error'
 import Order from '../models/order'
 import User, { IUser } from '../models/user'
@@ -92,7 +94,8 @@ export const getCustomers = async (
         }
 
         if (search) {
-            const searchRegex = new RegExp(search as string, 'i')
+            const safeSearch = escapeRegExp(String(search))
+            const searchRegex = new RegExp(safeSearch, 'i')
             const orders = await Order.find(
                 {
                     $or: [{ deliveryAddress: searchRegex }],
@@ -179,13 +182,21 @@ export const updateCustomer = async (
     next: NextFunction
 ) => {
     try {
-        const updatedUser = await User.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            {
-                new: true,
-            }
-        )
+        const { name, email } = req.body
+
+        const updateData: Partial<IUser> = {}
+
+        if (typeof name === 'string') {
+            updateData.name = escapeHtml(name)
+        }
+
+        if (typeof email === 'string') {
+            updateData.email = escapeHtml(email)
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(req.params.id, updateData, {
+            new: true,
+        })
             .orFail(
                 () =>
                     new NotFoundError(

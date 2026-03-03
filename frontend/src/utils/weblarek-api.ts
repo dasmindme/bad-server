@@ -72,6 +72,15 @@ class Api {
         })
     }
 
+    protected getCsrfToken = async () => {
+        const res = await fetch(`${this.baseUrl}/auth/csrf-token`, {
+            method: 'GET',
+            credentials: 'include',
+        })
+        const data = await res.json()
+        return data.csrfToken as string
+    }
+
     protected requestWithRefresh = async <T>(
         endpoint: string,
         options: RequestInit
@@ -226,12 +235,15 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
         )
     }
 
-    loginUser = (data: UserLoginBodyDto) => {
+    loginUser = async (data: UserLoginBodyDto) => {
+        const csrfToken = await this.getCsrfToken()
+
         return this.request<UserResponseToken>('/auth/login', {
             method: 'POST',
             body: JSON.stringify(data),
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken,
             },
             credentials: 'include',
         })

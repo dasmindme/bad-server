@@ -27,7 +27,8 @@ const storage = multer.diskStorage({
         file: Express.Multer.File,
         cb: FileNameCallback
     ) => {
-        cb(null, file.originalname)
+        const safeName = file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_')
+        cb(null, safeName)
     },
 })
 
@@ -51,4 +52,8 @@ const fileFilter = (
     return cb(null, true)
 }
 
-export default multer({ storage, fileFilter })
+export default multer({
+    storage,
+    fileFilter,
+    limits: { fileSize: 5 * 1024 * 1024 },
+})

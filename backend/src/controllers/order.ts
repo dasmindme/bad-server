@@ -1,5 +1,7 @@
 import { NextFunction, Request, Response } from 'express'
 import { FilterQuery, Error as MongooseError, Types } from 'mongoose'
+import escapeRegExp from '../utils/escapeRegExp'
+import escapeHtml from '../utils/escapeHtml'
 import BadRequestError from '../errors/bad-request-error'
 import NotFoundError from '../errors/not-found-error'
 import Order, { IOrder } from '../models/order'
@@ -90,7 +92,8 @@ export const getOrders = async (
         ]
 
         if (search) {
-            const searchRegex = new RegExp(search as string, 'i')
+            const safeSearch = escapeRegExp(String(search))
+            const searchRegex = new RegExp(safeSearch, 'i')
             const searchNumber = Number(search)
 
             const searchConditions: any[] = [{ 'products.title': searchRegex }]
@@ -294,6 +297,10 @@ export const createOrder = async (
         const { address, payment, phone, total, email, items, comment } =
             req.body
 
+        const safeAddress = typeof address === 'string' ? escapeHtml(address) : address
+        const safeComment = typeof comment === 'string' ? escapeHtml(comment) : comment
+        const safeEmail = typeof email === 'string' ? escapeHtml(email) : email
+
         items.forEach((id: Types.ObjectId) => {
             const product = products.find((p) => p._id.equals(id))
             if (!product) {
@@ -314,10 +321,10 @@ export const createOrder = async (
             products: items,
             payment,
             phone,
-            email,
-            comment,
+            email: safeEmail,
+            comment: safeComment,
             customer: userId,
-            deliveryAddress: address,
+            deliveryAddress: safeAddress,
         })
         const populateOrder = await newOrder.populate(['customer', 'products'])
         await populateOrder.save()
