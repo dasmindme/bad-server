@@ -38,6 +38,12 @@ app.use(json({ limit: '1mb' }))
 app.use((req, res, next) => {
     const csrfToken = 'test-csrf-token'
     ;(req as any).csrfToken = () => csrfToken
+
+    res.cookie('_csrf', csrfToken, {
+        httpOnly: true,
+        sameSite: 'lax',
+    })
+
     res.locals.csrfToken = csrfToken
     next()
 })
