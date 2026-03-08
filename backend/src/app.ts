@@ -45,7 +45,29 @@ app.use((req, res, next) => {
     })
 
     res.locals.csrfToken = csrfToken
-    next()
+
+    const method = req.method.toUpperCase()
+    const safeMethods = ['GET', 'HEAD', 'OPTIONS']
+
+    if (safeMethods.includes(method)) {
+        return next()
+    }
+
+    const headerToken = req.headers['x-csrf-token']
+    const bodyToken =
+        req.body && typeof req.body._csrf === 'string'
+            ? (req.body._csrf as string)
+            : undefined
+
+    const requestToken =
+        (Array.isArray(headerToken) ? headerToken[0] : headerToken) ||
+        bodyToken
+
+    if (!requestToken || requestToken !== csrfToken) {
+        return res.status(403).json({ message: 'Invalid CSRF token' })
+    }
+
+    return next()
 })
 
 app.options('*', cors())

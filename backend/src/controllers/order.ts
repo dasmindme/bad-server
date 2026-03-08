@@ -326,8 +326,12 @@ export const createOrder = async (
         const { address, payment, phone, total, email, items, comment } =
             req.body
 
-        const safeAddress = typeof address === 'string' ? escapeHtml(address) : address
-        const safeComment = typeof comment === 'string' ? escapeHtml(comment) : comment
+        const safeAddress =
+            typeof address === 'string' ? escapeHtml(address) : address
+        const safeComment =
+            typeof comment === 'string'
+                ? escapeHtml(comment).replace(/</g, '<').replace(/>/g, '>')
+                : comment
         const safeEmail = typeof email === 'string' ? escapeHtml(email) : email
 
         items.forEach((id: Types.ObjectId) => {

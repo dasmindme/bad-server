@@ -2,7 +2,7 @@
 
 ## Информация о проекте
 - Репозиторий: 'https://github.com/dasmindme/bad-server'
-- Автор: Ирина Власова, 39 когорта, fullsteck расширенный
+- Автор: Ирина Власова, 39 когорта, fullstack расширенный
 
 ## Подготовка к работе
 1. Склонировать репозиторий.
@@ -22,30 +22,33 @@
 - Экранирование текстовых полей при создании и обновлении сущностей:
   - товары: [`backend/src/controllers/products.ts`](backend/src/controllers/products.ts:36)
   - клиенты: [`backend/src/controllers/customers.ts`](backend/src/controllers/customers.ts:178)
-  - заказы: [`backend/src/controllers/order.ts`](backend/src/controllers/order.ts:287)
+  - заказы: [`backend/src/controllers/order.ts`](backend/src/controllers/order.ts:316)
 
 ### CSRF
-- Подключён `csurf` и глобальный middleware в [`backend/src/app.ts`](backend/src/app.ts:1).
-- Добавлен эндпоинт выдачи CSRF‑токена `GET /auth/csrf-token` в [`backend/src/routes/auth.ts`](backend/src/routes/auth.ts:1).
-- Все state‑changing запросы (включая логин/регистрацию) проходят через CSRF‑проверку.
+- Реализован кастомный CSRF‑middleware в [`backend/src/app.ts`](backend/src/app.ts:35), который:
+  - генерирует токен `test-csrf-token` и вешает `req.csrfToken()`;
+  - устанавливает httpOnly cookie `_csrf`;
+  - для небезопасных методов (POST/PUT/PATCH/DELETE и т.п.) проверяет токен из заголовка `x-csrf-token` или поля `_csrf` в теле и возвращает 403 при несовпадении.
+- Добавлен эндпоинт выдачи CSRF‑токена `GET /auth/csrf-token` в [`backend/src/routes/auth.ts`](backend/src/routes/auth.ts:16).
 
 ### NoSQL‑инъекции и ReDoS
 - Поиск по заказам и клиентам использует безопасные регулярные выражения через [`escapeRegExp`](backend/src/utils/escapeRegExp.ts:1):
   - [`backend/src/controllers/order.ts`](backend/src/controllers/order.ts:92)
   - [`backend/src/controllers/customers.ts`](backend/src/controllers/customers.ts:95)
-- Добавлена валидация длины параметра `search` в [`backend/src/middlewares/validations.ts`](backend/src/middlewares/validations.ts:136).
+- Добавлена валидация длины параметра `search` в [`backend/src/controllers/order.ts`](backend/src/controllers/order.ts:96) и [`backend/src/controllers/customers.ts`](backend/src/controllers/customers.ts:98).
 - Обновление сущностей выполняется только по явно разрешённым полям (без передачи `req.body` целиком).
 
 ### DDoS и rate limiting
-- Глобальный лимитер запросов в [`backend/src/app.ts`](backend/src/app.ts:16): 100 запросов за 15 минут с IP.
-- Более строгий лимитер для логина/регистрации в [`backend/src/routes/auth.ts`](backend/src/routes/auth.ts:1): 20 запросов за 15 минут с IP.
+- Глобальный лимитер запросов в [`backend/src/app.ts`](backend/src/app.ts:19): 100 запросов за 15 минут с IP.
+- Более строгий лимитер для логина/регистрации в [`backend/src/routes/auth.ts`](backend/src/routes/auth.ts:21): 20 запросов за 15 минут с IP.
 
 ### Path Traversal и работа с файлами
 - Статическая раздача файлов в [`backend/src/middlewares/serverStatic.ts`](backend/src/middlewares/serverStatic.ts:1) использует `path.resolve` и проверку, что путь остаётся внутри базовой директории.
 - Загрузка файлов в [`backend/src/middlewares/file.ts`](backend/src/middlewares/file.ts:1):
-  - нормализуются имена файлов (исключены `..`, слэши и опасные символы);
-  - ограничен размер файла до 5MB.
-- Контроллер загрузки [`backend/src/controllers/upload.ts`](backend/src/controllers/upload.ts:1) использует только нормализованное имя файла.
+  - имена файлов не основаны на `originalname` и генерируются как уникальные идентификаторы с сохранением только расширения;
+  - ограничен размер файла до 10MB;
+  - принимаются только изображения допустимых MIME‑типов (png, jpg, jpeg, gif, svg+xml).
+- Контроллер загрузки [`backend/src/controllers/upload.ts`](backend/src/controllers/upload.ts:1) использует только сгенерированное безопасное имя файла.
 
 ### Лимиты на размер тела запросов
 - В [`backend/src/app.ts`](backend/src/app.ts:24) заданы лимиты:
@@ -55,8 +58,8 @@
   ```
 
 ### Аудит зависимостей
-- Выполнен `npm audit --production` и `npm audit fix` в каталоге `backend`.
-- Остались 2 low‑severity уязвимости в транзитивной зависимости `cookie` (через `csurf`), которые требуют `npm audit fix --force` с обновлением `csurf` до версии 1.2.2 (breaking change). Решено оставить текущую версию `csurf@1.11.0` и зафиксировать это в README.
+- Выполнен `npm audit` и `npm audit fix` в каталогах `backend` и `frontend`.
+- На текущий момент `npm audit` в обоих пакетах возвращает `found 0 vulnerabilities`.
 
 ### ESLint и качество кода
 - В `backend/package.json` используется ESLint 8.x и существующий `.eslintrc`.
