@@ -5,7 +5,6 @@ import 'dotenv/config'
 import express, { json, urlencoded } from 'express'
 import mongoose from 'mongoose'
 import path from 'path'
-import csurf from 'csurf'
 import rateLimit from 'express-rate-limit'
 import { DB_ADDRESS } from './config'
 import errorHandler from './middlewares/error-handler'
@@ -35,9 +34,6 @@ app.use(serveStatic(path.join(__dirname, 'public')))
 
 app.use(urlencoded({ extended: true, limit: '1mb' }))
 app.use(json({ limit: '1mb' }))
-
-const csrfProtection = csurf({ cookie: true })
-app.use(csrfProtection)
 
 app.options('*', cors())
 app.use(routes)
