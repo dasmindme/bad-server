@@ -3,6 +3,7 @@ import { FilterQuery } from 'mongoose'
 import escapeRegExp from '../utils/escapeRegExp'
 import escapeHtml from '../utils/escapeHtml'
 import NotFoundError from '../errors/not-found-error'
+import BadRequestError from '../errors/bad-request-error'
 import Order from '../models/order'
 import User, { IUser } from '../models/user'
 
@@ -30,6 +31,8 @@ export const getCustomers = async (
             orderCountTo,
             search,
         } = req.query
+
+        const pageSize = Math.min(Number(limit) || 10, 10)
 
         const filters: FilterQuery<Partial<IUser>> = {}
 
@@ -94,7 +97,13 @@ export const getCustomers = async (
         }
 
         if (search) {
-            const safeSearch = escapeRegExp(String(search))
+            const searchStr = String(search)
+
+            if (searchStr.length > 200) {
+                throw new BadRequestError('Слишком длинная строка поиска')
+            }
+
+            const safeSearch = escapeRegExp(searchStr)
             const searchRegex = new RegExp(safeSearch, 'i')
             const orders = await Order.find(
                 {
@@ -113,14 +122,29 @@ export const getCustomers = async (
 
         const sort: { [key: string]: any } = {}
 
+        const allowedSortFields = [
+            'createdAt',
+            'totalAmount',
+            'orderCount',
+            'lastOrderDate',
+        ]
+
+        if (sortField && !allowedSortFields.includes(String(sortField))) {
+            throw new BadRequestError('Недопустимое поле сортировки')
+        }
+
+        if (sortOrder && sortOrder !== 'asc' && sortOrder !== 'desc') {
+            throw new BadRequestError('Недопустимое направление сортировки')
+        }
+
         if (sortField && sortOrder) {
             sort[sortField as string] = sortOrder === 'desc' ? -1 : 1
         }
 
         const options = {
             sort,
-            skip: (Number(page) - 1) * Number(limit),
-            limit: Number(limit),
+            skip: (Number(page) - 1) * pageSize,
+            limit: pageSize,
         }
 
         const users = await User.find(filters, null, options).populate([
@@ -148,7 +172,7 @@ export const getCustomers = async (
                 totalUsers,
                 totalPages,
                 currentPage: Number(page),
-                pageSize: Number(limit),
+                pageSize,
             },
         })
     } catch (error) {
