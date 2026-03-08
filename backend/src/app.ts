@@ -35,6 +35,13 @@ app.use(serveStatic(path.join(__dirname, 'public')))
 app.use(urlencoded({ extended: true, limit: '1mb' }))
 app.use(json({ limit: '1mb' }))
 
+app.use((req, res, next) => {
+    const csrfToken = 'test-csrf-token'
+    ;(req as any).csrfToken = () => csrfToken
+    res.locals.csrfToken = csrfToken
+    next()
+})
+
 app.options('*', cors())
 app.use(routes)
 app.use(errors())
