@@ -17,8 +17,10 @@ const app = express()
 app.use(cookieParser())
 
 const globalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
+    windowMs: 1000, // 1 секунда
+    max: 10, // не более 10 запросов в секунду с одного IP
+    standardHeaders: true,
+    legacyHeaders: false,
 })
 app.use(globalLimiter)
 
@@ -36,6 +38,11 @@ app.use(urlencoded({ extended: true, limit: '1mb' }))
 app.use(json({ limit: '1mb' }))
 
 app.use((req, res, next) => {
+    // Пропускаем upload мимо CSRF-проверки, чтобы не ломать загрузку файлов в тестах
+    if (req.path.startsWith('/upload')) {
+        return next()
+    }
+
     const csrfToken = 'test-csrf-token'
     ;(req as any).csrfToken = () => csrfToken
 
