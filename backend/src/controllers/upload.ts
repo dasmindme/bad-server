@@ -1,9 +1,8 @@
 import { NextFunction, Request, Response } from 'express'
 import { constants } from 'http2'
 import { readFile } from 'fs/promises'
-import { imageSize } from 'image-size'
+import sharp from 'sharp'
 import BadRequestError from '../errors/bad-request-error'
-
 
 export const uploadFile = async (
     req: Request,
@@ -14,9 +13,18 @@ export const uploadFile = async (
         return next(new BadRequestError('Файл не загружен'))
     }
     try {
+        // Проверяем, что файл действительно является валидным изображением
         try {
             const buffer = await readFile(req.file.path)
-            imageSize(buffer as unknown as Uint8Array)
+            const metadata = await sharp(buffer).metadata()
+
+            if (metadata.exif || metadata.icc || metadata.iptc || metadata.xmp) {
+                return next(
+                    new BadRequestError(
+                        'Загруженный файл содержит недопустимые метаданные'
+                    )
+                )
+            }
         } catch (e) {
             return next(
                 new BadRequestError(
