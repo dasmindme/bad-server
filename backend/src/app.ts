@@ -24,7 +24,7 @@ app.use(globalLimiter)
 
 app.use(
     cors({
-        origin: 'http://localhost',
+        origin: 'http://localhost:5173',
         credentials: true,
     })
 )

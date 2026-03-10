@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import rateLimit from 'express-rate-limit'
 import {
     createProduct,
     deleteProduct,
@@ -15,7 +16,12 @@ import { Role } from '../models/user'
 
 const productRouter = Router()
 
-productRouter.get('/', getProducts)
+const strictLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+})
+
+productRouter.get('/', strictLimiter, getProducts)
 productRouter.post(
     '/',
     auth,
