@@ -30,6 +30,7 @@ export default defineConfig({
           @use "./src/scss/variables" as *;
           @use "./src/scss/mixins";
         `,
+        loadPaths: [__dirname],
       },
     },
   },
