@@ -39,7 +39,7 @@ app.use((req, res, next) => {
     const csrfToken = 'test-csrf-token'
     ;(req as any).csrfToken = () => csrfToken
 
-    res.cookie('csrfToken', csrfToken, {
+    res.cookie('_csrf', csrfToken, {
         httpOnly: true,
         sameSite: 'lax',
     })
