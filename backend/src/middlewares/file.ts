@@ -1,6 +1,7 @@
 import { Request, Express } from 'express'
 import multer, { FileFilterCallback } from 'multer'
 import { join, extname } from 'path'
+import { mkdirSync } from 'fs'
 
 type DestinationCallback = (error: Error | null, destination: string) => void
 type FileNameCallback = (error: Error | null, filename: string) => void
@@ -11,15 +12,17 @@ const storage = multer.diskStorage({
         _file: Express.Multer.File,
         cb: DestinationCallback
     ) => {
-        cb(
-            null,
-            join(
-                __dirname,
-                process.env.UPLOAD_PATH_TEMP
-                    ? `../public/${process.env.UPLOAD_PATH_TEMP}`
-                    : '../public'
-            )
+        const destination = join(
+            __dirname,
+            process.env.UPLOAD_PATH_TEMP
+                ? `../public/${process.env.UPLOAD_PATH_TEMP}`
+                : '../public'
         )
+
+        // Гарантируем, что директория для временных файлов существует
+        mkdirSync(destination, { recursive: true })
+
+        cb(null, destination)
     },
 
     filename: (
@@ -39,6 +42,8 @@ const types = [
     'image/jpeg',
     'image/gif',
     'image/svg+xml',
+    // На некоторых окружениях картинки могут приходить как octet-stream
+    'application/octet-stream',
 ]
 
 const fileFilter = (
@@ -47,7 +52,7 @@ const fileFilter = (
     cb: FileFilterCallback
 ) => {
     if (!types.includes(file.mimetype)) {
-        return cb(null, false)
+        return cb(new Error('Unsupported file type'))
     }
 
     return cb(null, true)
