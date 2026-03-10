@@ -100,6 +100,10 @@ export const getOrders = async (
                 throw new BadRequestError('Слишком длинная строка поиска')
             }
 
+            if (/[.*+?^${}()|[\]\\]/.test(searchStr)) {
+                throw new BadRequestError('Недопустимые символы в параметре поиска')
+            }
+
             const safeSearch = escapeRegExp(searchStr)
             const searchRegex = new RegExp(safeSearch, 'i')
             const searchNumber = Number(search)
@@ -330,7 +334,7 @@ export const createOrder = async (
             typeof address === 'string' ? escapeHtml(address) : address
         const safeComment =
             typeof comment === 'string'
-                ? escapeHtml(comment).replace(/</g, '<').replace(/>/g, '>')
+                ? escapeHtml(comment)
                 : comment
         const safeEmail = typeof email === 'string' ? escapeHtml(email) : email
 

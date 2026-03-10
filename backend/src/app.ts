@@ -39,7 +39,7 @@ app.use((req, res, next) => {
     const csrfToken = 'test-csrf-token'
     ;(req as any).csrfToken = () => csrfToken
 
-    res.cookie('_csrf', csrfToken, {
+    res.cookie('csrfToken', csrfToken, {
         httpOnly: true,
         sameSite: 'lax',
     })
@@ -55,8 +55,8 @@ app.use((req, res, next) => {
 
     const headerToken = req.headers['x-csrf-token']
     const bodyToken =
-        req.body && typeof req.body._csrf === 'string'
-            ? (req.body._csrf as string)
+        req.body && typeof (req.body as any).csrfToken === 'string'
+            ? ((req.body as any).csrfToken as string)
             : undefined
 
     const requestToken =
