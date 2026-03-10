@@ -1,7 +1,8 @@
 import { NextFunction, Request, Response } from 'express'
 import { FilterQuery, Error as MongooseError, Types } from 'mongoose'
-import escapeRegExp from '../utils/escapeRegExp'
+import sanitizeHtml from 'sanitize-html'
 import escapeHtml from '../utils/escapeHtml'
+import escapeRegExp from '../utils/escapeRegExp'
 import BadRequestError from '../errors/bad-request-error'
 import NotFoundError from '../errors/not-found-error'
 import Order, { IOrder } from '../models/order'
@@ -334,7 +335,7 @@ export const createOrder = async (
             typeof address === 'string' ? escapeHtml(address) : address
         const safeComment =
             typeof comment === 'string'
-                ? escapeHtml(comment)
+                ? sanitizeHtml(comment, { allowedTags: [], allowedAttributes: {} })
                 : comment
         const safeEmail = typeof email === 'string' ? escapeHtml(email) : email
 
