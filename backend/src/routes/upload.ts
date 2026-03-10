@@ -5,7 +5,7 @@ import BadRequestError from '../errors/bad-request-error'
 
 const uploadRouter = Router()
 
-const MIN_FILE_SIZE = 2 * 1024
+const MIN_FILE_SIZE = 1
 
 const minFileSizeGuard = (
     req: Request,
