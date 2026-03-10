@@ -18,7 +18,8 @@ export const uploadFile = async (
             const buffer = await readFile(req.file.path)
             const metadata = await sharp(buffer).metadata()
 
-            if (metadata.exif || metadata.icc || metadata.iptc || metadata.xmp) {
+            // Отклоняем только действительно опасные/лишние метаданные
+            if (metadata.exif || metadata.iptc || metadata.xmp) {
                 return next(
                     new BadRequestError(
                         'Загруженный файл содержит недопустимые метаданные'
