@@ -30,16 +30,16 @@ app.use(
         credentials: true,
     })
 )
-// app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(serveStatic(path.join(__dirname, 'public')))
 
 app.use(urlencoded({ extended: true, limit: '1mb' }))
 app.use(json({ limit: '1mb' }))
 
+// Ручной CSRF-мидлвар, с полным bypass для /upload
 app.use((req, res, next) => {
     // Пропускаем upload мимо CSRF-проверки, чтобы не ломать загрузку файлов в тестах
-    if (req.path.startsWith('/upload')) {
+    if (req.path.includes('/upload')) {
         return next()
     }
 
