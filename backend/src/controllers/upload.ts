@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express'
 import { constants } from 'http2'
 import { readFile } from 'fs/promises'
+import path from 'node:path'
 import sharp from 'sharp'
 import BadRequestError from '../errors/bad-request-error'
 
@@ -14,8 +15,11 @@ export const uploadFile = async (
     }
 
     try {
+        const ext = path.extname(req.file.originalname).toLowerCase()
+        const isSvg = req.file.mimetype === 'image/svg+xml' || ext === '.svg'
+
         // SVG не проверяем через sharp — в CI sharp может не уметь SVG
-        if (req.file.mimetype === 'image/svg+xml') {
+        if (isSvg) {
             const fileName = process.env.UPLOAD_PATH
                 ? `/${process.env.UPLOAD_PATH}/${req.file.filename}`
                 : `/${req.file.filename}`
