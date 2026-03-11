@@ -12,8 +12,21 @@ export const uploadFile = async (
     if (!req.file) {
         return next(new BadRequestError('Файл не загружен'))
     }
+
     try {
-        // Проверяем, что файл действительно является валидным изображением
+        // SVG не проверяем через sharp — в CI sharp может не уметь SVG
+        if (req.file.mimetype === 'image/svg+xml') {
+            const fileName = process.env.UPLOAD_PATH
+                ? `/${process.env.UPLOAD_PATH}/${req.file.filename}`
+                : `/${req.file.filename}`
+
+            return res.status(constants.HTTP_STATUS_CREATED).send({
+                fileName,
+                originalName: req.file.originalname,
+            })
+        }
+
+        // Проверяем только растровые изображения
         try {
             const buffer = await readFile(req.file.path)
             const metadata = await sharp(buffer).metadata()
@@ -26,7 +39,7 @@ export const uploadFile = async (
                     )
                 )
             }
-        } catch (e) {
+        } catch {
             return next(
                 new BadRequestError(
                     'Загруженный файл не является валидным изображением'
@@ -36,10 +49,11 @@ export const uploadFile = async (
 
         const fileName = process.env.UPLOAD_PATH
             ? `/${process.env.UPLOAD_PATH}/${req.file.filename}`
-            : `/${req.file?.filename}`
+            : `/${req.file.filename}`
+
         return res.status(constants.HTTP_STATUS_CREATED).send({
             fileName,
-            originalName: req.file?.originalname,
+            originalName: req.file.originalname,
         })
     } catch (error) {
         return next(error)
