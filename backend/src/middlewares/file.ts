@@ -1,5 +1,5 @@
 import { Request, Express } from 'express'
-import multer, { FileFilterCallback } from 'multer'
+import multer from 'multer'
 import { join, extname } from 'path'
 import { mkdirSync } from 'fs'
 
@@ -36,30 +36,7 @@ const storage = multer.diskStorage({
     },
 })
 
-const types = [
-    'image/png',
-    'image/jpg',
-    'image/jpeg',
-    'image/gif',
-    'image/svg+xml',
-    // На некоторых окружениях картинки могут приходить как octet-stream
-    'application/octet-stream',
-]
-
-const fileFilter = (
-    _req: Request,
-    file: Express.Multer.File,
-    cb: FileFilterCallback
-) => {
-    if (!types.includes(file.mimetype)) {
-        return cb(new Error('Unsupported file type'))
-    }
-
-    return cb(null, true)
-}
-
 export default multer({
     storage,
-    fileFilter,
     limits: { fileSize: 10 * 1024 * 1024 },
 })
