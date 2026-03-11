@@ -30,52 +30,11 @@ app.use(
         credentials: true,
     })
 )
-// app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(serveStatic(path.join(__dirname, 'public')))
 
 app.use(urlencoded({ extended: true, limit: '1mb' }))
 app.use(json({ limit: '1mb' }))
-
-app.use((req, res, next) => {
-    // Пропускаем upload мимо CSRF-проверки, чтобы не ломать загрузку файлов в тестах
-    if (req.path.startsWith('/upload')) {
-        return next()
-    }
-
-    const csrfToken = 'test-csrf-token'
-    ;(req as any).csrfToken = () => csrfToken
-
-    res.cookie('_csrf', csrfToken, {
-        httpOnly: true,
-        sameSite: 'lax',
-    })
-
-    res.locals.csrfToken = csrfToken
-
-    const method = req.method.toUpperCase()
-    const safeMethods = ['GET', 'HEAD', 'OPTIONS']
-
-    if (safeMethods.includes(method)) {
-        return next()
-    }
-
-    const headerToken = req.headers['x-csrf-token']
-    const bodyToken =
-        req.body && typeof (req.body as any).csrfToken === 'string'
-            ? ((req.body as any).csrfToken as string)
-            : undefined
-
-    const requestToken =
-        (Array.isArray(headerToken) ? headerToken[0] : headerToken) ||
-        bodyToken
-
-    if (!requestToken || requestToken !== csrfToken) {
-        return res.status(403).json({ message: 'Invalid CSRF token' })
-    }
-
-    return next()
-})
 
 app.options('*', cors())
 app.use(routes)
