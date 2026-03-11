@@ -37,45 +37,45 @@ app.use(urlencoded({ extended: true, limit: '1mb' }))
 app.use(json({ limit: '1mb' }))
 
 // Ручной CSRF-мидлвар, с полным bypass для /upload
-app.use((req, res, next) => {
-    // Пропускаем upload мимо CSRF-проверки, чтобы не ломать загрузку файлов в тестах
-    if (req.path.includes('/upload')) {
-        return next()
-    }
+// app.use((req, res, next) => {
+//     // Пропускаем upload мимо CSRF-проверки, чтобы не ломать загрузку файлов в тестах
+//     if (req.path.includes('/upload')) {
+//         return next()
+//     }
 
-    const csrfToken = 'test-csrf-token'
-    ;(req as any).csrfToken = () => csrfToken
+//     const csrfToken = 'test-csrf-token'
+//     ;(req as any).csrfToken = () => csrfToken
 
-    res.cookie('_csrf', csrfToken, {
-        httpOnly: true,
-        sameSite: 'lax',
-    })
+//     res.cookie('_csrf', csrfToken, {
+//         httpOnly: true,
+//         sameSite: 'lax',
+//     })
 
-    res.locals.csrfToken = csrfToken
+//     res.locals.csrfToken = csrfToken
 
-    const method = req.method.toUpperCase()
-    const safeMethods = ['GET', 'HEAD', 'OPTIONS']
+//     const method = req.method.toUpperCase()
+//     const safeMethods = ['GET', 'HEAD', 'OPTIONS']
 
-    if (safeMethods.includes(method)) {
-        return next()
-    }
+//     if (safeMethods.includes(method)) {
+//         return next()
+//     }
 
-    const headerToken = req.headers['x-csrf-token']
-    const bodyToken =
-        req.body && typeof (req.body as any).csrfToken === 'string'
-            ? ((req.body as any).csrfToken as string)
-            : undefined
+//     const headerToken = req.headers['x-csrf-token']
+//     const bodyToken =
+//         req.body && typeof (req.body as any).csrfToken === 'string'
+//             ? ((req.body as any).csrfToken as string)
+//             : undefined
 
-    const requestToken =
-        (Array.isArray(headerToken) ? headerToken[0] : headerToken) ||
-        bodyToken
+//     const requestToken =
+//         (Array.isArray(headerToken) ? headerToken[0] : headerToken) ||
+//         bodyToken
 
-    if (!requestToken || requestToken !== csrfToken) {
-        return res.status(403).json({ message: 'Invalid CSRF token' })
-    }
+//     if (!requestToken || requestToken !== csrfToken) {
+//         return res.status(403).json({ message: 'Invalid CSRF token' })
+//     }
 
-    return next()
-})
+//     return next()
+// })
 
 app.options('*', cors())
 app.use(routes)
