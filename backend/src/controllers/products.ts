@@ -48,7 +48,6 @@ const createProduct = async (
             : undefined
         const safeCategory = category ? escapeHtml(String(category)) : undefined
 
-        // Переносим картинку из временной папки
         if (image) {
             movingFile(
                 image.fileName,

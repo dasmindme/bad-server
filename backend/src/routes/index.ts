@@ -13,7 +13,6 @@ const router = Router()
 router.use('/auth', authRouter)
 router.use('/product', productRouter)
 router.use('/order', auth, orderRouter)
-// upload доступен без auth, чтобы не ломать загрузку файлов в тестах
 router.use('/upload', uploadRouter)
 router.use('/customers', auth, customerRouter)
 

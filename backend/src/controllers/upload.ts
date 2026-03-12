@@ -18,12 +18,10 @@ export const uploadFile = async (
         const ext = path.extname(req.file.originalname).toLowerCase()
         const isSvg = req.file.mimetype === 'image/svg+xml' || ext === '.svg'
 
-        // SVG не проверяем через sharp — в CI sharp может не уметь SVG
         if (!isSvg) {
-            // Проверяем только, что файл действительно является валидным растровым изображением
             try {
                 const buffer = await readFile(req.file.path)
-                await sharp(buffer).metadata() // если не картинка — упадёт
+                await sharp(buffer).metadata()
             } catch {
                 return next(
                     new BadRequestError(
