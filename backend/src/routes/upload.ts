@@ -7,6 +7,17 @@ const uploadRouter = Router()
 
 const MIN_FILE_SIZE = 2 * 1024
 
+const normalizeMulterFile = (
+    req: Request,
+    _res: Response,
+    next: NextFunction
+) => {
+    if (!req.file && Array.isArray(req.files) && req.files.length > 0) {
+        ;(req as any).file = req.files[0]
+    }
+    next()
+}
+
 const minFileSizeGuard = (
     req: Request,
     _res: Response,
@@ -29,26 +40,8 @@ const minFileSizeGuard = (
 
 uploadRouter.post(
     '/',
-    (req, res, next) => {
-        res.on('finish', () => {
-            // eslint-disable-next-line no-console
-            console.error('[upload.finish]', res.statusCode)
-        })
-        next()
-    },
-    fileMiddleware.single('file'),
-    (req, _res, next) => {
-        // eslint-disable-next-line no-console
-        console.error('[upload.file]', {
-            hasFile: !!req.file,
-            size: req.file?.size,
-            mimetype: req.file?.mimetype,
-            originalname: req.file?.originalname,
-            filename: req.file?.filename,
-            path: req.file?.path,
-        })
-        next()
-    },
+    fileMiddleware.any(),
+    normalizeMulterFile,
     minFileSizeGuard,
     uploadFile
 )
