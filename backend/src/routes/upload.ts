@@ -29,7 +29,26 @@ const minFileSizeGuard = (
 
 uploadRouter.post(
     '/',
+    (req, res, next) => {
+        res.on('finish', () => {
+            // eslint-disable-next-line no-console
+            console.error('[upload.finish]', res.statusCode)
+        })
+        next()
+    },
     fileMiddleware.single('file'),
+    (req, _res, next) => {
+        // eslint-disable-next-line no-console
+        console.error('[upload.file]', {
+            hasFile: !!req.file,
+            size: req.file?.size,
+            mimetype: req.file?.mimetype,
+            originalname: req.file?.originalname,
+            filename: req.file?.filename,
+            path: req.file?.path,
+        })
+        next()
+    },
     minFileSizeGuard,
     uploadFile
 )
