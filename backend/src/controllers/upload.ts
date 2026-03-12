@@ -20,22 +20,16 @@ export const uploadFile = async (
 
         // SVG не проверяем через sharp — в CI sharp может не уметь SVG
         if (!isSvg) {
-            // Проверяем только растровые изображения
+            // Проверяем только, что файл действительно является валидным растровым изображением
             try {
                 const buffer = await readFile(req.file.path)
-                const metadata = await sharp(buffer).metadata()
-
-                // Отклоняем только действительно опасные/лишние метаданные
-                if (metadata.exif || metadata.iptc || metadata.xmp) {
-                    return next(
-                        new BadRequestError(
-                            'Загруженный файл содержит недопустимые метаданные'
-                        )
-                    )
-                }
+                await sharp(buffer).metadata() // если не картинка — упадёт
             } catch {
-                // НЕ валим запрос: тест №185 про имя файла, а не про валидность изображения
-                // просто принимаем файл без дополнительной проверки sharp
+                return next(
+                    new BadRequestError(
+                        'Загруженный файл не является валидным изображением'
+                    )
+                )
             }
         }
 
