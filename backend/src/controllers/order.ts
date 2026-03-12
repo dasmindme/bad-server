@@ -1,5 +1,8 @@
 import { NextFunction, Request, Response } from 'express'
 import { FilterQuery, Error as MongooseError, Types } from 'mongoose'
+import sanitizeHtml from 'sanitize-html'
+import escapeHtml from '../utils/escapeHtml'
+import escapeRegExp from '../utils/escapeRegExp'
 import BadRequestError from '../errors/bad-request-error'
 import NotFoundError from '../errors/not-found-error'
 import Order, { IOrder } from '../models/order'
@@ -28,15 +31,16 @@ export const getOrders = async (
             search,
         } = req.query
 
+        const pageSize = Math.min(Number(limit) || 10, 10)
+
         const filters: FilterQuery<Partial<IOrder>> = {}
 
-        if (status) {
-            if (typeof status === 'object') {
-                Object.assign(filters, status)
+        if (status !== undefined) {
+            if (typeof status !== 'string') {
+                throw new BadRequestError('Недопустимое значение status')
             }
-            if (typeof status === 'string') {
-                filters.status = status
-            }
+
+            filters.status = status
         }
 
         if (totalAmountFrom) {
@@ -90,7 +94,18 @@ export const getOrders = async (
         ]
 
         if (search) {
-            const searchRegex = new RegExp(search as string, 'i')
+            const searchStr = String(search)
+
+            if (searchStr.length > 200) {
+                throw new BadRequestError('Слишком длинная строка поиска')
+            }
+
+            if (/[.*+?^${}()|[\]\\]/.test(searchStr)) {
+                throw new BadRequestError('Недопустимые символы в параметре поиска')
+            }
+
+            const safeSearch = escapeRegExp(searchStr)
+            const searchRegex = new RegExp(safeSearch, 'i')
             const searchNumber = Number(search)
 
             const searchConditions: any[] = [{ 'products.title': searchRegex }]
@@ -110,14 +125,29 @@ export const getOrders = async (
 
         const sort: { [key: string]: any } = {}
 
+        const allowedSortFields = [
+            'createdAt',
+            'totalAmount',
+            'status',
+            'orderNumber',
+        ]
+
+        if (sortField && !allowedSortFields.includes(String(sortField))) {
+            throw new BadRequestError('Недопустимое поле сортировки')
+        }
+
+        if (sortOrder && sortOrder !== 'asc' && sortOrder !== 'desc') {
+            throw new BadRequestError('Недопустимое направление сортировки')
+        }
+
         if (sortField && sortOrder) {
             sort[sortField as string] = sortOrder === 'desc' ? -1 : 1
         }
 
         aggregatePipeline.push(
             { $sort: sort },
-            { $skip: (Number(page) - 1) * Number(limit) },
-            { $limit: Number(limit) },
+            { $skip: (Number(page) - 1) * pageSize },
+            { $limit: pageSize },
             {
                 $group: {
                     _id: '$_id',
@@ -133,7 +163,7 @@ export const getOrders = async (
 
         const orders = await Order.aggregate(aggregatePipeline)
         const totalOrders = await Order.countDocuments(filters)
-        const totalPages = Math.ceil(totalOrders / Number(limit))
+        const totalPages = Math.ceil(totalOrders / pageSize)
 
         res.status(200).json({
             orders,
@@ -141,7 +171,7 @@ export const getOrders = async (
                 totalOrders,
                 totalPages,
                 currentPage: Number(page),
-                pageSize: Number(limit),
+                pageSize,
             },
         })
     } catch (error) {
@@ -157,9 +187,10 @@ export const getOrdersCurrentUser = async (
     try {
         const userId = res.locals.user._id
         const { search, page = 1, limit = 5 } = req.query
+        const pageSize = Math.min(Number(limit) || 5, 10)
         const options = {
-            skip: (Number(page) - 1) * Number(limit),
-            limit: Number(limit),
+            skip: (Number(page) - 1) * pageSize,
+            limit: pageSize,
         }
 
         const user = await User.findById(userId)
@@ -184,8 +215,13 @@ export const getOrdersCurrentUser = async (
         let orders = user.orders as unknown as IOrder[]
 
         if (search) {
-            // если не экранировать то получаем Invalid regular expression: /+1/i: Nothing to repeat
-            const searchRegex = new RegExp(search as string, 'i')
+            const searchStr = String(search)
+
+            if (searchStr.length > 200) {
+                throw new BadRequestError('Слишком длинная строка поиска')
+            }
+
+            const searchRegex = new RegExp(searchStr as string, 'i')
             const searchNumber = Number(search)
             const products = await Product.find({ title: searchRegex })
             const productIds = products.map((product) => product._id)
@@ -205,7 +241,7 @@ export const getOrdersCurrentUser = async (
         }
 
         const totalOrders = orders.length
-        const totalPages = Math.ceil(totalOrders / Number(limit))
+        const totalPages = Math.ceil(totalOrders / pageSize)
 
         orders = orders.slice(options.skip, options.skip + options.limit)
 
@@ -215,7 +251,7 @@ export const getOrdersCurrentUser = async (
                 totalOrders,
                 totalPages,
                 currentPage: Number(page),
-                pageSize: Number(limit),
+                pageSize,
             },
         })
     } catch (error) {
@@ -294,6 +330,14 @@ export const createOrder = async (
         const { address, payment, phone, total, email, items, comment } =
             req.body
 
+        const safeAddress =
+            typeof address === 'string' ? escapeHtml(address) : address
+        const safeComment =
+            typeof comment === 'string'
+                ? sanitizeHtml(comment, { allowedTags: [], allowedAttributes: {} })
+                : comment
+        const safeEmail = typeof email === 'string' ? escapeHtml(email) : email
+
         items.forEach((id: Types.ObjectId) => {
             const product = products.find((p) => p._id.equals(id))
             if (!product) {
@@ -314,10 +358,10 @@ export const createOrder = async (
             products: items,
             payment,
             phone,
-            email,
-            comment,
+            email: safeEmail,
+            comment: safeComment,
             customer: userId,
-            deliveryAddress: address,
+            deliveryAddress: safeAddress,
         })
         const populateOrder = await newOrder.populate(['customer', 'products'])
         await populateOrder.save()

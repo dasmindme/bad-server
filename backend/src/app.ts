@@ -5,6 +5,7 @@ import 'dotenv/config'
 import express, { json, urlencoded } from 'express'
 import mongoose from 'mongoose'
 import path from 'path'
+import rateLimit from 'express-rate-limit'
 import { DB_ADDRESS } from './config'
 import errorHandler from './middlewares/error-handler'
 import serveStatic from './middlewares/serverStatic'
@@ -15,14 +16,26 @@ const app = express()
 
 app.use(cookieParser())
 
-app.use(cors())
-// app.use(cors({ origin: ORIGIN_ALLOW, credentials: true }));
-// app.use(express.static(path.join(__dirname, 'public')));
+const globalLimiter = rateLimit({
+    windowMs: 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+})
+app.use(globalLimiter)
+
+app.use(
+    cors({
+        origin: 'http://localhost:5173',
+        credentials: true,
+    })
+)
 
 app.use(serveStatic(path.join(__dirname, 'public')))
 
-app.use(urlencoded({ extended: true }))
-app.use(json())
+app.use(urlencoded({ extended: true, limit: '1mb' }))
+app.use(json({ limit: '1mb' }))
+
 
 app.options('*', cors())
 app.use(routes)

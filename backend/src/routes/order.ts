@@ -10,12 +10,19 @@ import {
 } from '../controllers/order'
 import auth, { roleGuardMiddleware } from '../middlewares/auth'
 import { validateOrderBody } from '../middlewares/validations'
+import noInjection from '../middlewares/no-injection'
 import { Role } from '../models/user'
 
 const orderRouter = Router()
 
 orderRouter.post('/', auth, validateOrderBody, createOrder)
-orderRouter.get('/all', auth, getOrders)
+orderRouter.get(
+    '/all',
+    auth,
+    roleGuardMiddleware(Role.Admin),
+    noInjection,
+    getOrders
+)
 orderRouter.get('/all/me', auth, getOrdersCurrentUser)
 orderRouter.get(
     '/:orderNumber',

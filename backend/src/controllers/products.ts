@@ -7,6 +7,7 @@ import ConflictError from '../errors/conflict-error'
 import NotFoundError from '../errors/not-found-error'
 import Product from '../models/product'
 import movingFile from '../utils/movingFile'
+import escapeHtml from '../utils/escapeHtml'
 
 // GET /product
 const getProducts = async (req: Request, res: Response, next: NextFunction) => {
@@ -41,8 +42,12 @@ const createProduct = async (
 ) => {
     try {
         const { description, category, price, title, image } = req.body
+        const safeTitle = title ? escapeHtml(String(title)) : undefined
+        const safeDescription = description
+            ? escapeHtml(String(description))
+            : undefined
+        const safeCategory = category ? escapeHtml(String(category)) : undefined
 
-        // Переносим картинку из временной папки
         if (image) {
             movingFile(
                 image.fileName,
@@ -52,11 +57,11 @@ const createProduct = async (
         }
 
         const product = await Product.create({
-            description,
+            description: safeDescription ?? description,
             image,
-            category,
+            category: safeCategory ?? category,
             price,
-            title,
+            title: safeTitle ?? title,
         })
         return res.status(constants.HTTP_STATUS_CREATED).send(product)
     } catch (error) {
@@ -81,8 +86,8 @@ const updateProduct = async (
 ) => {
     try {
         const { productId } = req.params
-        const { image } = req.body
-
+        const { image, title, description, category, price } = req.body
+ 
         // Переносим картинку из временной папки
         if (image) {
             movingFile(
@@ -91,15 +96,29 @@ const updateProduct = async (
                 join(__dirname, `../public/${process.env.UPLOAD_PATH}`)
             )
         }
-
+ 
+        const updateData: Record<string, unknown> = {}
+ 
+        if (typeof title === 'string') {
+            updateData.title = escapeHtml(title)
+        }
+        if (typeof description === 'string') {
+            updateData.description = escapeHtml(description)
+        }
+        if (typeof category === 'string') {
+            updateData.category = escapeHtml(category)
+        }
+        if (typeof price === 'number' || price === null) {
+            updateData.price = price ?? null
+        }
+        if (image) {
+            updateData.image = image
+        }
+ 
         const product = await Product.findByIdAndUpdate(
             productId,
             {
-                $set: {
-                    ...req.body,
-                    price: req.body.price ? req.body.price : null,
-                    image: req.body.image ? req.body.image : undefined,
-                },
+                $set: updateData,
             },
             { runValidators: true, new: true }
         ).orFail(() => new NotFoundError('Нет товара по заданному id'))
